@@ -6,37 +6,66 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+
+import java.util.List;
 import java.util.Objects;
 
 @RestController
 public class Connection {
-    private final RestTemplate restTemplate;
-    private String cookie;
 
-    final String url = "http://94.198.50.185:7081/api/users";
+    private final RestTemplate restTemplate;
+    private final String cookie;
+
+    final String url = "http://94.198.50.185:7081/api/users/";
 
     @Autowired
     public Connection(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+        cookie = getCookie();
+    }
+
+    public String getCookie() {
+        ResponseEntity<String> forEntity = restTemplate.getForEntity(url, String.class);
+        return Objects.requireNonNull(forEntity.getHeaders().get("Set-Cookie")).getFirst();
     }
 
     @GetMapping
     public String getAllUsers() {
-        ResponseEntity<String> forEntity = restTemplate.getForEntity(url, String.class);
-        cookie = Objects.requireNonNull(forEntity.getHeaders().get("Set-Cookie")).getFirst();
-        return restTemplate.exchange(url,
-                HttpMethod.GET, null, String.class).getBody();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        return restTemplate.exchange(url, HttpMethod.GET, entity, String.class).getBody();
     }
 
     @PostMapping
     public String saveUser(User user) {
-        return restTemplate.postForEntity(url, user, String.class).getBody();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.add("Cookie", cookie);
+        HttpEntity<User> entity = new HttpEntity<>(user, headers);
+        return restTemplate.exchange(
+                url, HttpMethod.POST, entity, String.class).getBody();
     }
 
     @PutMapping
-    public String editUser( User user) {
+    public String updateUser(@RequestBody User user) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.add("Cookie", cookie);
+        HttpEntity<User> entity = new HttpEntity<>(user, headers);
+        return restTemplate.exchange(
+                url, HttpMethod.PUT, entity, String.class).getBody();
+    }
 
-        return restTemplate.exchange(url,
-                HttpMethod.PUT, new HttpHeaders(Objects.requireNonNull(restTemplate.getForEntity(url,String.class).getHeaders().get("Set-Cookie")).getFirst();), String.class).getBody();
+    @DeleteMapping(value = "/template/products/{id}")
+    public String deleteUser(@PathVariable("id") Long id) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.add("Cookie", cookie);
+        HttpEntity<User> entity = new HttpEntity<>(headers);
+        return restTemplate.exchange(
+                url + id, HttpMethod.DELETE, entity, String.class).getBody();
     }
 }
+
+
